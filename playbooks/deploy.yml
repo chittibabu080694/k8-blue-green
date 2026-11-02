@@ -1,0 +1,32 @@
+---
+- name: Kubernetes Blue-Green Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - name: 1. Ensure Blue and Green deployments are applied to the cluster
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+      loop:
+        - "../k8s-manifests/deployment-blue.yaml"
+        - "../k8s-manifests/deployment-green.yaml"
+        - "../k8s-manifests/service.yaml"
+
+    - name: 2. Switch Service traffic to Green environment
+      kubernetes.core.k8s:
+        state: patched
+        kind: Service
+        namespace: default
+        name: web-app-service
+        definition:
+          spec:
+            selector:
+              app: web-app
+              version: green
+      register: service_switch
+
+    - name: 3. Output switch status
+      ansible.builtin.debug:
+        msg: "Successfully switched traffic to Green environment!"
